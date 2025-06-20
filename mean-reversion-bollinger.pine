@@ -1,0 +1,44 @@
+//@version=5
+strategy("Bollinger Band Mean Reversion", overlay=true, default_qty_type=strategy.fixed, default_qty_value=2)
+
+// BB Inputs
+length = input(20, title="Bollinger Bands Length")
+src = input(close, title="Source")
+mult = input(2.0, title="Bollinger Bands Multiplier")
+
+// Calculate Bollinger Bands
+basis = ta.sma(src, length)
+dev = mult * ta.stdev(src, length)
+upper = basis + dev
+lower = basis - dev
+
+// Plot Bollinger Bands
+plot(basis, color=color.blue, title="Basis")
+p1 = plot(upper, color=color.red, title="Upper Band")
+p2 = plot(lower, color=color.green, title="Lower Band")
+fill(p1, p2, color=color.new(color.red, 90), title="Bollinger Bands Fill")
+
+// Mean reversion strategy
+
+// Entry
+longCondition = ta.crossover(src, lower)
+shortCondition = ta.crossunder(src, upper)
+
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+
+if (shortCondition)
+    strategy.entry("Short", strategy.short)
+
+// Exit Inputs
+stopLossPerc = input.float(1.0, title="Stop Loss Percentage")
+takeProfitPerc = input.float(2.0, title="Take Profit Percentage")
+longStop = strategy.position_avg_price * (1-stopLossPerc / 100)
+longTarget = strategy.position_avg_price * (1+takeProfitPerc / 100)
+shortStop = strategy.position_avg_price * (1+stopLossPerc / 100)
+shortTarget = strategy.position_avg_price * (1-takeProfitPerc / 100)
+
+if(strategy.position_size > 0)
+    strategy.exit("Long Exit", from_entry="Long", stop=longStop, limit=longTarget)
+if(strategy.position_size < 0)
+    strategy.exit("Short Exit", from_entry="Short", stop=shortStop, limit=shortTarget)
