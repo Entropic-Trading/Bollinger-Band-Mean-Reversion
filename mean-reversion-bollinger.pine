@@ -1,5 +1,6 @@
 //@version=5
-strategy("Bollinger Band Mean Reversion", overlay=true, default_qty_type=strategy.fixed, default_qty_value=2)
+// Mean Reversion Strategy using Bollinger Bands. Long only. Trailing Stop.
+strategy("BB Mean Reversion Long", overlay=true, default_qty_type=strategy.fixed, default_qty_value=2)
 
 // BB Inputs
 length = input(20, title="Bollinger Bands Length")
@@ -22,23 +23,32 @@ fill(p1, p2, color=color.new(color.red, 90), title="Bollinger Bands Fill")
 
 // Entry
 longCondition = ta.crossover(src, lower)
-shortCondition = ta.crossunder(src, upper)
+//shortCondition = ta.crossunder(src, upper)
 
 if (longCondition)
-    strategy.entry("Long", strategy.long)
+    strategy.entry("Long", strategy.long, qty=2)
 
-if (shortCondition)
-    strategy.entry("Short", strategy.short)
+//if (shortCondition)
+//    strategy.entry("Short", strategy.short)
 
 // Exit Inputs
 stopLossPerc = input.float(1.0, title="Stop Loss Percentage")
 takeProfitPerc = input.float(2.0, title="Take Profit Percentage")
 longStop = strategy.position_avg_price * (1-stopLossPerc / 100)
 longTarget = strategy.position_avg_price * (1+takeProfitPerc / 100)
-shortStop = strategy.position_avg_price * (1+stopLossPerc / 100)
-shortTarget = strategy.position_avg_price * (1-takeProfitPerc / 100)
+//debug
+plot(strategy.position_size > 0 ? longTarget : na, color=color.green, style=plot.style_stepline, title="Long Target")
+atrlength = input(14, title="ATR Length")
+atrMult = input(1.0, title="ATR Multiplier for Trailing Stop")
+longTrailRaw = close - ta.atr(atrlength) * atrMult
+longTrail = math.max(longTrailRaw, longTarget)
+//shortStop = strategy.position_avg_price * (1+stopLossPerc / 100)
+//shortTarget = strategy.position_avg_price * (1-takeProfitPerc / 100)
 
 if(strategy.position_size > 0)
-    strategy.exit("Long Exit", from_entry="Long", stop=longStop, limit=longTarget)
-if(strategy.position_size < 0)
-    strategy.exit("Short Exit", from_entry="Short", stop=shortStop, limit=shortTarget)
+    strategy.exit("Stop Loss", from_entry="Long", qty=2, stop=longStop)
+if(strategy.position_size > 0 and close >= longTarget)
+    strategy.exit("Take Profit", from_entry="Long", qty=1, limit=close)
+    strategy.exit("Trailing Stop", from_entry="Long", qty=1, stop=longTrail)
+//if(strategy.position_size < 0)
+    //strategy.exit("Short Exit", from_entry="Short", stop=shortStop, limit=shortTarget)
