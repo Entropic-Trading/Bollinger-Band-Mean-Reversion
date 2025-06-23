@@ -1,0 +1,38 @@
+//@version=5
+// Mean Reversion Strategy using Bollinger Bands. Long only
+// Target Exits were not firing in the back-test, so this version is for debugging.
+
+strategy("BB Mean Reversion Long Debug", overlay=true, default_qty_type=strategy.fixed, default_qty_value=2)
+
+// BB Inputs
+length = input(20, title="Bollinger Bands Length")
+src = input(close, title="Source")
+mult = input(2.0, title="Bollinger Bands Multiplier")
+
+// Calculate Bollinger Bands
+basis = ta.sma(src, length)
+dev = mult * ta.stdev(src, length)
+upper = basis + dev
+lower = basis - dev
+
+// Plot Bollinger Bands
+plot(basis, color=color.blue, title="Basis")
+p1 = plot(upper, color=color.red, title="Upper Band")
+p2 = plot(lower, color=color.green, title="Lower Band")
+fill(p1, p2, color=color.new(color.red, 90), title="Bollinger Bands Fill")
+
+// Mean reversion strategy
+
+// Entry
+longCondition = ta.crossover(src, lower)
+if (longCondition)
+    strategy.entry("Long", strategy.long, qty=2)
+
+// Exit Inputs
+TargetPerc = input.float(2.0, title="Take Profit Percentage")
+longTarget = strategy.position_avg_price * (1 + TargetPerc / 100)
+
+// Exit
+
+if (strategy.position_size > 0 and close >= longTarget)
+    strategy.close("Long")
